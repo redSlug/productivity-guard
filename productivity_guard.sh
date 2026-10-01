@@ -26,10 +26,10 @@ STEAM_HELPER_PROCESS="Steam Helper"
 GAME_PROCESS_PATTERN="/steamapps/common/"
 
 # Thresholds in minutes. Lower these for testing (see README.md).
-WARN_MINUTES_1=5
-WARN_MINUTES_2=10
-WARN_MINUTES_3=15
-KILL_MINUTES=20
+WARN_MINUTES_1=1
+WARN_MINUTES_2=2
+WARN_MINUTES_3=3
+KILL_MINUTES=5
 
 # How long the final dialog is shown before the kill actually happens.
 KILL_WARNING_SECONDS=20

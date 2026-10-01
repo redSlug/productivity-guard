@@ -17,6 +17,12 @@
     <key>RunAtLoad</key>
     <true/>
 
+    <!-- Without this, launchd kills the entire process group (including
+         the backgrounded `osascript` dialog in notify()) the instant this
+         script exits, so warning dialogs never get a chance to render. -->
+    <key>AbandonProcessGroup</key>
+    <true/>
+
     <key>StandardOutPath</key>
     <string>/tmp/com.user.productivityguard.out.log</string>
 
