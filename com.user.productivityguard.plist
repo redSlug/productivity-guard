@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.user.stopsteam</string>
+    <string>com.user.productivityguard</string>
 
     <key>ProgramArguments</key>
     <array>
@@ -18,9 +18,9 @@
     <true/>
 
     <key>StandardOutPath</key>
-    <string>/tmp/com.user.stopsteam.out.log</string>
+    <string>/tmp/com.user.productivityguard.out.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/tmp/com.user.stopsteam.err.log</string>
+    <string>/tmp/com.user.productivityguard.err.log</string>
 </dict>
 </plist>

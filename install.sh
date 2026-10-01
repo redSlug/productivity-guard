@@ -1,15 +1,15 @@
 #!/bin/bash
 #
 # install.sh
-# Installs the stop-steam LaunchAgent for the current user on macOS Sonoma 14.7+.
+# Installs the productivity-guard LaunchAgent for the current user on macOS Sonoma 14.7+.
 
 set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_PATH="$REPO_DIR/stop_steam.sh"
-PLIST_SRC="$REPO_DIR/com.user.stopsteam.plist"
-PLIST_DEST="$HOME/Library/LaunchAgents/com.user.stopsteam.plist"
-LABEL="com.user.stopsteam"
+PLIST_SRC="$REPO_DIR/com.user.productivityguard.plist"
+PLIST_DEST="$HOME/Library/LaunchAgents/com.user.productivityguard.plist"
+LABEL="com.user.productivityguard"
 
 echo "REPO_DIR=$REPO_DIR"
 echo "SCRIPT_PATH=$SCRIPT_PATH"
