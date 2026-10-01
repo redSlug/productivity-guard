@@ -127,6 +127,49 @@ steam_active() {
     return 1
 }
 
+# Prints current timer state and exits, without touching playtime stats or
+# firing any dialogs. Invoked via `./productivity_guard.sh status`.
+print_status() {
+    if ! steam_active; then
+        echo "Steam/game: not running"
+        exit 0
+    fi
+
+    local label
+    label="$(current_game_name)"
+    [ -z "$label" ] && label="Steam"
+    echo "Steam/game: ACTIVE (${label})"
+
+    if [ ! -f "$STATE_FILE" ]; then
+        echo "Timer: not started yet (starts on next run, within 60s)"
+        exit 0
+    fi
+
+    local start now elapsed elapsed_min fired kill_at to_kill
+    start="$(cat "$STATE_FILE")"
+    now=$(date +%s)
+    elapsed=$(( now - start ))
+    elapsed_min=$(( elapsed / 60 ))
+    fired="none"
+    [ -f "$FLAG_FILE" ] && [ -s "$FLAG_FILE" ] && fired="$(cat "$FLAG_FILE")"
+
+    echo "Running for: $(format_minutes "$elapsed_min") (${elapsed}s)"
+    echo "Warnings fired: ${fired}"
+
+    kill_at=$(( start + KILL_MINUTES * 60 ))
+    to_kill=$(( kill_at - now ))
+    if [ "$to_kill" -le 0 ]; then
+        echo "Kill threshold: already passed $(( -to_kill ))s ago -- should fire on next run (within 60s)"
+    else
+        echo "Time to kill: ${to_kill}s (~$(( (to_kill + 59) / 60 ))m)"
+    fi
+    exit 0
+}
+
+if [ "$1" = "status" ]; then
+    print_status
+fi
+
 # Not running: clear all state and exit.
 if ! steam_active; then
     rm -f "$STATE_FILE" "$FLAG_FILE"

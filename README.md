@@ -16,12 +16,13 @@ never get timed out.
 
 - When Steam becomes active, it records the launch time in
   `/tmp/steam_timer_start`.
-- At **5, 10, and 15 minutes**, it pops up a modal alert (via `osascript`)
-  warning that Steam will be closed soon, and showing today's and your
-  all-time playtime. Each alert fires only once per session and
-  auto-dismisses after 30 seconds if ignored.
-- At **20 minutes**, it shows a final alert, waits `KILL_WARNING_SECONDS`
-  (20s by default) so you actually get to see it, then force-terminates
+- At **1, 2, and 3 minutes** (`WARN_MINUTES_1/2/3` in the script), it pops
+  up a modal alert (via `osascript`) warning that Steam will be closed
+  soon, and showing today's and your all-time playtime. Each alert fires
+  only once per session and auto-dismisses after 30 seconds if ignored.
+- At **5 minutes** (`KILL_MINUTES`), it shows a final alert, waits
+  `KILL_WARNING_SECONDS` (20s by default) so you actually get to see it,
+  then force-terminates
   the Steam client (`steam_osx`, `Steam Helper`) with `pkill -9`, along
   with any game currently running from Steam's library (matched by
   `/steamapps/common/` in the process path, so this covers any title, not
@@ -94,12 +95,19 @@ launchctl print gui/$(id -u)/com.user.productivityguard
 cat /tmp/com.user.productivityguard.out.log
 cat /tmp/com.user.productivityguard.err.log
 
-# Current timer state (only present while Steam is running):
-cat /tmp/steam_timer_start    # epoch seconds Steam was first seen
-cat /tmp/steam_timer_fired    # which warning thresholds already fired
+# One-shot debug summary: active?, which game, elapsed time, which
+# warnings already fired, and seconds remaining until the kill threshold.
+# Read-only -- doesn't touch playtime stats or fire any dialogs.
+./productivity_guard.sh status
+```
 
-# Is Steam actually being detected? (must match STEAM_PROCESS in the script)
-pgrep -x steam_osx && echo "steam IS running" || echo "steam is NOT running"
+Example output while a game is running:
+
+```
+Steam/game: ACTIVE (Ticket to Ride)
+Running for: 2m (138s)
+Warnings fired: 1,2,
+Time to kill: 162s (~3m)
 ```
 
 `launchctl print` showing `runs = N` with `N` increasing roughly once a
@@ -109,33 +117,26 @@ and updates while Steam is open, the detection logic is working too.
 
 ## Testing
 
-The default thresholds (5/10/15/20 minutes) are slow to verify by hand.
-Edit the variables at the top of `productivity_guard.sh` to shrink them, e.g. to
-use seconds-scale minutes for a quick test:
-
-```bash
-WARN_MINUTES_1=1
-WARN_MINUTES_2=2
-WARN_MINUTES_3=3
-KILL_MINUTES=4
-```
-
-Then reload the agent so launchd picks up the change:
+The default thresholds (1/2/3/5 minutes) are already fast enough to
+verify by hand. To go even faster, edit the variables at the top of
+`productivity_guard.sh`, then reload the agent so launchd picks up the
+change:
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.user.productivityguard.plist
 launchctl load ~/Library/LaunchAgents/com.user.productivityguard.plist
 ```
 
-Launch Steam and watch for dialogs at each threshold. You can also run the
-script directly, bypassing launchd, to see its behavior immediately:
+Launch Steam and watch for dialogs at each threshold, checking
+`./productivity_guard.sh status` (see above) along the way. You can also
+run the script directly, bypassing launchd, to see its behavior
+immediately:
 
 ```bash
 ./productivity_guard.sh
 ```
 
-Check `/tmp/steam_timer_start` and `/tmp/steam_timer_fired` to inspect
-state, and `/tmp/com.user.productivityguard.out.log` /
+Check `/tmp/com.user.productivityguard.out.log` /
 `/tmp/com.user.productivityguard.err.log` for launchd output.
 
 Remember to restore the original threshold values (or reinstall from a
