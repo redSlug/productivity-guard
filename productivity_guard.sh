@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# stop_steam.sh
+# productivity_guard.sh
 # Monitors Steam and nags/force-closes it after configurable time thresholds.
 # Written for macOS Sonoma 14.7's default /bin/bash (bash 3.2) - no bash 4+ features.
 

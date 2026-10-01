@@ -6,7 +6,7 @@
 set -e
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SCRIPT_PATH="$REPO_DIR/stop_steam.sh"
+SCRIPT_PATH="$REPO_DIR/productivity_guard.sh"
 PLIST_SRC="$REPO_DIR/com.user.productivityguard.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.user.productivityguard.plist"
 LABEL="com.user.productivityguard"
@@ -32,4 +32,4 @@ fi
 launchctl load "$PLIST_DEST"
 
 echo "Installed $LABEL -> $PLIST_DEST"
-echo "stop_steam.sh will run every 60 seconds via launchd."
+echo "productivity_guard.sh will run every 60 seconds via launchd."

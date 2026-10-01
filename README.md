@@ -3,9 +3,11 @@
 A macOS LaunchAgent that watches for Steam and nags/force-quits it after a
 time limit. Tested for compatibility with **macOS Sonoma 14.7**.
 
+![Productivity Guard dialog](screenshot.jpg)
+
 ## What it does
 
-`stop_steam.sh` runs once a minute (via launchd) and checks whether Steam
+`productivity_guard.sh` runs once a minute (via launchd) and checks whether Steam
 is "active" — either the Steam client (`steam_osx`) or any game launched
 from Steam's library is running. Both are checked because quitting the
 Steam client window does not kill an already-running game on macOS; if
@@ -38,7 +40,7 @@ never get timed out.
   `steamwebhelper`) — confirm on your machine with
   `ps -axo comm | grep -i steam` while Steam is running. If your install
   reports different names, update `STEAM_PROCESS` / `STEAM_HELPER_PROCESS`
-  at the top of `stop_steam.sh` to match.
+  at the top of `productivity_guard.sh` to match.
 - You may need to grant your terminal/launchd's `osascript` permission to
   show notifications/dialogs the first time it runs (System Settings →
   Privacy & Security → Automation / Notifications).
@@ -47,12 +49,12 @@ never get timed out.
 
 1. Make the script executable:
    ```bash
-   chmod +x stop_steam.sh
+   chmod +x productivity_guard.sh
    ```
 2. Copy the plist into your LaunchAgents directory, substituting the real
-   path to `stop_steam.sh` (plists can't expand `~`):
+   path to `productivity_guard.sh` (plists can't expand `~`):
    ```bash
-   sed "s|__SCRIPT_PATH__|$HOME/Development/productivity-guard/stop_steam.sh|g" \
+   sed "s|__SCRIPT_PATH__|$HOME/Development/productivity-guard/productivity_guard.sh|g" \
        com.user.productivityguard.plist > ~/Library/LaunchAgents/com.user.productivityguard.plist
    ```
 3. Load it:
@@ -108,7 +110,7 @@ and updates while Steam is open, the detection logic is working too.
 ## Testing
 
 The default thresholds (5/10/15/20 minutes) are slow to verify by hand.
-Edit the variables at the top of `stop_steam.sh` to shrink them, e.g. to
+Edit the variables at the top of `productivity_guard.sh` to shrink them, e.g. to
 use seconds-scale minutes for a quick test:
 
 ```bash
@@ -129,7 +131,7 @@ Launch Steam and watch for dialogs at each threshold. You can also run the
 script directly, bypassing launchd, to see its behavior immediately:
 
 ```bash
-./stop_steam.sh
+./productivity_guard.sh
 ```
 
 Check `/tmp/steam_timer_start` and `/tmp/steam_timer_fired` to inspect
