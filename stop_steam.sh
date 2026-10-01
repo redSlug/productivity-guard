@@ -1,0 +1,80 @@
+#!/bin/bash
+#
+# stop_steam.sh
+# Monitors Steam and nags/force-closes it after configurable time thresholds.
+# Written for macOS Sonoma 14.7's default /bin/bash (bash 3.2) - no bash 4+ features.
+
+STATE_FILE="/tmp/steam_timer_start"
+FLAG_FILE="/tmp/steam_timer_fired"
+
+# Thresholds in minutes. Lower these for testing (see README.md).
+WARN_MINUTES_1=5
+WARN_MINUTES_2=10
+WARN_MINUTES_3=15
+KILL_MINUTES=20
+
+notify() {
+    local message="$1"
+    # Run async (&) so launchd never blocks waiting on the dialog.
+    osascript -e "display dialog \"${message}\" with title \"Steam Guard\" with icon caution giving up after 30" &
+}
+
+# Not running: clear all state and exit.
+if ! pgrep -x "steam" > /dev/null 2>&1; then
+    rm -f "$STATE_FILE" "$FLAG_FILE"
+    exit 0
+fi
+
+NOW=$(date +%s)
+
+# First sighting: record launch time and reset fired-alert tracking.
+if [ ! -f "$STATE_FILE" ]; then
+    echo "$NOW" > "$STATE_FILE"
+    : > "$FLAG_FILE"
+    exit 0
+fi
+
+START=$(cat "$STATE_FILE")
+if ! [[ "$START" =~ ^[0-9]+$ ]]; then
+    echo "$NOW" > "$STATE_FILE"
+    START=$NOW
+fi
+
+ELAPSED=$(( NOW - START ))
+ELAPSED_MIN=$(( ELAPSED / 60 ))
+
+FIRED=""
+if [ -f "$FLAG_FILE" ]; then
+    FIRED=$(cat "$FLAG_FILE")
+fi
+
+fire_once() {
+    local tag="$1"
+    local message="$2"
+    case ",$FIRED," in
+        *",$tag,"*)
+            ;;
+        *)
+            notify "$message"
+            FIRED="${FIRED}${tag},"
+            echo "$FIRED" > "$FLAG_FILE"
+            ;;
+    esac
+}
+
+if [ "$ELAPSED_MIN" -ge "$KILL_MINUTES" ]; then
+    notify "Steam has been running for ${KILL_MINUTES} minutes. Closing it now."
+    sleep 1
+    pkill -9 -x "steam" 2>/dev/null
+    pkill -9 -x "steamwebhelper" 2>/dev/null
+    rm -f "$STATE_FILE" "$FLAG_FILE"
+    exit 0
+elif [ "$ELAPSED_MIN" -ge "$WARN_MINUTES_3" ]; then
+    fire_once "15" "Steam has been running for ${WARN_MINUTES_3} minutes. It will be closed at ${KILL_MINUTES} minutes."
+elif [ "$ELAPSED_MIN" -ge "$WARN_MINUTES_2" ]; then
+    fire_once "10" "Steam has been running for ${WARN_MINUTES_2} minutes. It will be closed at ${KILL_MINUTES} minutes."
+elif [ "$ELAPSED_MIN" -ge "$WARN_MINUTES_1" ]; then
+    fire_once "5" "Steam has been running for ${WARN_MINUTES_1} minutes. It will be closed at ${KILL_MINUTES} minutes."
+fi
+
+exit 0

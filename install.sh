@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+# install.sh
+# Installs the stop-steam LaunchAgent for the current user on macOS Sonoma 14.7+.
+
+set -e
+
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_PATH="$REPO_DIR/stop_steam.sh"
+PLIST_SRC="$REPO_DIR/com.user.stopsteam.plist"
+PLIST_DEST="$HOME/Library/LaunchAgents/com.user.stopsteam.plist"
+LABEL="com.user.stopsteam"
+
+chmod +x "$SCRIPT_PATH"
+
+mkdir -p "$HOME/Library/LaunchAgents"
+
+# Substitute the real script path (plists cannot expand ~ or $HOME).
+sed "s|__SCRIPT_PATH__|$SCRIPT_PATH|g" "$PLIST_SRC" > "$PLIST_DEST"
+
+# Unload any previous copy before loading the fresh one.
+if launchctl list | grep -q "$LABEL"; then
+    launchctl unload "$PLIST_DEST" 2>/dev/null || true
+fi
+
+launchctl load "$PLIST_DEST"
+
+echo "Installed $LABEL -> $PLIST_DEST"
+echo "stop_steam.sh will run every 60 seconds via launchd."
