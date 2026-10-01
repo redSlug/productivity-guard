@@ -7,20 +7,41 @@
 STATE_FILE="/tmp/steam_timer_start"
 FLAG_FILE="/tmp/steam_timer_fired"
 
+# Steam's macOS client process is named "steam_osx" (Contents/MacOS/steam_osx
+# inside Steam.AppBundle), not "steam". Its helper processes are named
+# "Steam Helper", not "steamwebhelper". Verify on your machine with:
+#   ps -axo comm | grep -i steam
+STEAM_PROCESS="steam_osx"
+STEAM_HELPER_PROCESS="Steam Helper"
+
+# Matches any currently running game launched from Steam's library, e.g.
+# .../Steam/steamapps/common/Ticket to Ride/TicketToRide.app/... -- this is
+# Steam's standard install layout, so it catches any game, not just one title.
+GAME_PROCESS_PATTERN="/steamapps/common/"
+
 # Thresholds in minutes. Lower these for testing (see README.md).
 WARN_MINUTES_1=5
 WARN_MINUTES_2=10
 WARN_MINUTES_3=15
 KILL_MINUTES=20
 
+DIALOG_TITLE="Productivity Guard"
+
+# First name for personalized messages, e.g. "Bradley Dettmer" -> "Bradley".
+# Falls back to the short login name if the full name can't be read.
+USER_NAME="$(id -F 2>/dev/null | awk '{print $1}')"
+if [ -z "$USER_NAME" ]; then
+    USER_NAME="$(whoami)"
+fi
+
 notify() {
     local message="$1"
     # Run async (&) so launchd never blocks waiting on the dialog.
-    osascript -e "display dialog \"${message}\" with title \"Steam Guard\" with icon caution giving up after 30" &
+    osascript -e "display dialog \"Hey ${USER_NAME}, ${message}\" with title \"${DIALOG_TITLE}\" with icon caution giving up after 30" &
 }
 
 # Not running: clear all state and exit.
-if ! pgrep -x "steam" > /dev/null 2>&1; then
+if ! pgrep -x "$STEAM_PROCESS" > /dev/null 2>&1; then
     rm -f "$STATE_FILE" "$FLAG_FILE"
     exit 0
 fi
@@ -65,8 +86,9 @@ fire_once() {
 if [ "$ELAPSED_MIN" -ge "$KILL_MINUTES" ]; then
     notify "Steam has been running for ${KILL_MINUTES} minutes. Closing it now."
     sleep 1
-    pkill -9 -x "steam" 2>/dev/null
-    pkill -9 -x "steamwebhelper" 2>/dev/null
+    pkill -9 -f "$GAME_PROCESS_PATTERN" 2>/dev/null
+    pkill -9 -x "$STEAM_PROCESS" 2>/dev/null
+    pkill -9 -x "$STEAM_HELPER_PROCESS" 2>/dev/null
     rm -f "$STATE_FILE" "$FLAG_FILE"
     exit 0
 elif [ "$ELAPSED_MIN" -ge "$WARN_MINUTES_3" ]; then

@@ -12,16 +12,22 @@ time limit. Tested for compatibility with **macOS Sonoma 14.7**.
 - At **5, 10, and 15 minutes**, it pops up a modal alert (via `osascript`)
   warning that Steam will be closed soon. Each alert fires only once per
   Steam session and auto-dismisses after 30 seconds if ignored.
-- At **20 minutes**, it shows a final alert and force-terminates both
-  `steam` and `steamwebhelper` with `pkill -9`.
+- At **20 minutes**, it shows a final alert and force-terminates the Steam
+  client (`steam_osx`, `Steam Helper`) with `pkill -9`, along with any game
+  currently running from Steam's library (matched by `/steamapps/common/`
+  in the process path, so this covers any title, not just one game).
 - If Steam isn't running, all timer state is cleared so the next launch
   starts a fresh countdown.
 
 ## Prerequisites
 
 - macOS Sonoma 14.7 (or later) with the default `/bin/bash` (bash 3.2).
-- Steam installed, with its process visible as `steam` (check with
-  `pgrep -x steam` while Steam is running).
+- Steam installed. On macOS, Steam's client process is named `steam_osx`
+  (not `steam`) and its helpers are named `Steam Helper` (not
+  `steamwebhelper`) — confirm on your machine with
+  `ps -axo comm | grep -i steam` while Steam is running. If your install
+  reports different names, update `STEAM_PROCESS` / `STEAM_HELPER_PROCESS`
+  at the top of `stop_steam.sh` to match.
 - You may need to grant your terminal/launchd's `osascript` permission to
   show notifications/dialogs the first time it runs (System Settings →
   Privacy & Security → Automation / Notifications).
@@ -56,6 +62,37 @@ time limit. Tested for compatibility with **macOS Sonoma 14.7**.
 This substitutes the correct absolute path into the plist, copies it to
 `~/Library/LaunchAgents/`, and loads it with `launchctl`. Safe to re-run
 (it unloads any previous copy first).
+
+## Verifying it's installed and running
+
+Quick checks to confirm the LaunchAgent is actually active, without
+waiting for a Steam session:
+
+```bash
+# Is it loaded? ("-" in the PID column just means it's idle between runs,
+# not that it's broken. The number after it is the last exit code.)
+launchctl list | grep com.user.stopsteam
+
+# Full status: confirms the script path launchd is using, how many times
+# it has run, and its last exit code (0 = success).
+launchctl print gui/$(id -u)/com.user.stopsteam
+
+# Any errors logged by the script or launchd itself?
+cat /tmp/com.user.stopsteam.out.log
+cat /tmp/com.user.stopsteam.err.log
+
+# Current timer state (only present while Steam is running):
+cat /tmp/steam_timer_start    # epoch seconds Steam was first seen
+cat /tmp/steam_timer_fired    # which warning thresholds already fired
+
+# Is Steam actually being detected? (must match STEAM_PROCESS in the script)
+pgrep -x steam_osx && echo "steam IS running" || echo "steam is NOT running"
+```
+
+`launchctl print` showing `runs = N` with `N` increasing roughly once a
+minute, and `last exit code = 0`, confirms launchd is calling the script
+on schedule and it's exiting cleanly. If `/tmp/steam_timer_start` appears
+and updates while Steam is open, the detection logic is working too.
 
 ## Testing
 

@@ -11,6 +11,12 @@ PLIST_SRC="$REPO_DIR/com.user.stopsteam.plist"
 PLIST_DEST="$HOME/Library/LaunchAgents/com.user.stopsteam.plist"
 LABEL="com.user.stopsteam"
 
+echo "REPO_DIR=$REPO_DIR"
+echo "SCRIPT_PATH=$SCRIPT_PATH"
+echo "PLIST_SRC=$PLIST_SRC"
+echo "PLIST_DEST=$PLIST_DEST"
+echo "LABEL=$LABEL"
+
 chmod +x "$SCRIPT_PATH"
 
 mkdir -p "$HOME/Library/LaunchAgents"
