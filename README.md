@@ -7,7 +7,7 @@ time limit. Tested for compatibility with **macOS Sonoma 14.7**.
 
 ## What it does
 
-`productivity_guard.sh` runs once a minute (via launchd) and checks whether Steam
+`productivity_guard.py` runs once a minute (via launchd) and checks whether Steam
 is "active" — either the Steam client (`steam_osx`) or any game launched
 from Steam's library is running. Both are checked because quitting the
 Steam client window does not kill an already-running game on macOS; if
@@ -35,13 +35,17 @@ never get timed out.
 
 ## Prerequisites
 
-- macOS Sonoma 14.7 (or later) with the default `/bin/bash` (bash 3.2).
+- macOS Sonoma 14.7 (or later).
+- Python 3, installed at `/opt/homebrew/bin/python3` (Homebrew's default
+  location). launchd runs with its own minimal PATH, so the plist points at
+  this absolute path rather than relying on PATH lookup. If your `python3`
+  lives elsewhere, update the path in `com.user.productivityguard.plist`.
 - Steam installed. On macOS, Steam's client process is named `steam_osx`
   (not `steam`) and its helpers are named `Steam Helper` (not
   `steamwebhelper`) — confirm on your machine with
   `ps -axo comm | grep -i steam` while Steam is running. If your install
   reports different names, update `STEAM_PROCESS` / `STEAM_HELPER_PROCESS`
-  at the top of `productivity_guard.sh` to match.
+  at the top of `productivity_guard.py` to match.
 - You may need to grant your terminal/launchd's `osascript` permission to
   show notifications/dialogs the first time it runs (System Settings →
   Privacy & Security → Automation / Notifications).
@@ -50,12 +54,12 @@ never get timed out.
 
 1. Make the script executable:
    ```bash
-   chmod +x productivity_guard.sh
+   chmod +x productivity_guard.py
    ```
 2. Copy the plist into your LaunchAgents directory, substituting the real
-   path to `productivity_guard.sh` (plists can't expand `~`):
+   path to `productivity_guard.py` (plists can't expand `~`):
    ```bash
-   sed "s|__SCRIPT_PATH__|$HOME/Development/productivity-guard/productivity_guard.sh|g" \
+   sed "s|__SCRIPT_PATH__|$HOME/Development/productivity-guard/productivity_guard.py|g" \
        com.user.productivityguard.plist > ~/Library/LaunchAgents/com.user.productivityguard.plist
    ```
 3. Load it:
@@ -98,7 +102,7 @@ cat /tmp/com.user.productivityguard.err.log
 # One-shot debug summary: active?, which game, elapsed time, which
 # warnings already fired, and seconds remaining until the kill threshold.
 # Read-only -- doesn't touch playtime stats or fire any dialogs.
-./productivity_guard.sh status
+./productivity_guard.py status
 ```
 
 Example output while a game is running:
@@ -119,7 +123,7 @@ and updates while Steam is open, the detection logic is working too.
 
 The default thresholds (1/2/3/5 minutes) are already fast enough to
 verify by hand. To go even faster, edit the variables at the top of
-`productivity_guard.sh`, then reload the agent so launchd picks up the
+`productivity_guard.py`, then reload the agent so launchd picks up the
 change:
 
 ```bash
@@ -128,12 +132,12 @@ launchctl load ~/Library/LaunchAgents/com.user.productivityguard.plist
 ```
 
 Launch Steam and watch for dialogs at each threshold, checking
-`./productivity_guard.sh status` (see above) along the way. You can also
+`./productivity_guard.py status` (see above) along the way. You can also
 run the script directly, bypassing launchd, to see its behavior
 immediately:
 
 ```bash
-./productivity_guard.sh
+./productivity_guard.py
 ```
 
 Check `/tmp/com.user.productivityguard.out.log` /
@@ -145,20 +149,25 @@ clean checkout) once you're done testing.
 ## Playtime tracking
 
 `data/playtime.json` tracks how long you've played, independent of the
-warning timer:
+warning timer. It's a JSON array with one entry per calendar day:
 
 ```json
-{"start_date":"2026-10-01","date":"2026-10-01","daily_minutes":23,"total_minutes":143,"game":"Ticket to Ride"}
+[
+  {"date": "2026-10-15", "minutes_played": 42, "game": "Ticket to Ride"},
+  {"date": "2026-10-16", "minutes_played": 10, "game": "Ticket to Ride"}
+]
 ```
 
-- `start_date` — the day tracking began; never changes. Shown in dialogs
-  as "total since Oct 1, 2026".
-- `date` / `daily_minutes` — today's playtime; `daily_minutes` resets to 0
-  automatically on a new calendar day.
-- `total_minutes` — all-time total; never resets.
-- `game` — the currently running game's folder name under Steam's
-  `steamapps/common/`, e.g. "Ticket to Ride". Empty if only the Steam
-  client is open with no game running.
+- `date` / `minutes_played` — that day's playtime. A new entry is appended
+  automatically on each new calendar day; past entries are never modified.
+- `game` — that day's most recently running game, by folder name under
+  Steam's `steamapps/common/`, e.g. "Ticket to Ride". Empty if only the
+  Steam client was open with no game running.
+
+The all-time total shown in dialogs ("Xh Ym total since Oct 1, 2026") is
+`HISTORICAL_MINUTES` (a fixed constant in `productivity_guard.py`, covering
+play before this log existed) plus the sum of every entry's
+`minutes_played`.
 
 This file lives inside the repo, under `data/`, to keep everything
 contained in one place rather than scattered across `/tmp` and dotfiles.

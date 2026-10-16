@@ -5,9 +5,13 @@
     <key>Label</key>
     <string>com.user.productivityguard</string>
 
+    <!-- Absolute path, not just "python3": launchd runs this with its own
+         minimal PATH (no ~/.zshrc, no Homebrew on PATH), so a bare "python3"
+         would silently resolve to Apple's old CLT-bundled interpreter (or
+         nothing) instead of this one. -->
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/bash</string>
+        <string>/opt/homebrew/bin/python3</string>
         <string>__SCRIPT_PATH__</string>
     </array>
 
