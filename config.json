@@ -1,0 +1,12 @@
+{
+  "session_warn_minutes_1": 10,
+  "session_warn_minutes_2": 12,
+  "session_warn_minutes_3": 17,
+  "session_kill_minutes": 18,
+  "kill_warning_seconds": 20,
+  "today_escalation_minutes": 50,
+  "today_escalation_alert_interval": 5,
+  "today_escalation_kill_interval": 15,
+  "today_hard_escalation_minutes": 120,
+  "today_hard_escalation_kill_interval": 7
+}

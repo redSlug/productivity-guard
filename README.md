@@ -15,13 +15,14 @@ only `steam_osx` were checked, a game left running after Steam quit would
 never get timed out.
 
 - When Steam becomes active, it records the launch time in
-  `/tmp/steam_timer_start`.
-- At **1, 2, and 3 minutes** (`WARN_MINUTES_1/2/3` in the script), it pops
-  up a modal alert (via `osascript`) warning that Steam will be closed
-  soon, and showing today's and your all-time playtime. Each alert fires
-  only once per session and auto-dismisses after 30 seconds if ignored.
-- At **5 minutes** (`KILL_MINUTES`), it shows a final alert, waits
-  `KILL_WARNING_SECONDS` (20s by default) so you actually get to see it,
+  `/tmp/steam_timer_session.json`.
+- At **1, 2, and 3 minutes** (`session_warn_minutes_1/2/3` in `config.json`),
+  it pops up a modal alert (via `osascript`) warning that Steam will be
+  closed soon, and showing today's and your all-time playtime. Each alert
+  fires only once per session and auto-dismisses after 30 seconds if
+  ignored.
+- At **5 minutes** (`session_kill_minutes`), it shows a final alert, waits
+  `kill_warning_seconds` (20s by default) so you actually get to see it,
   then force-terminates
   the Steam client (`steam_osx`, `Steam Helper`) with `pkill -9`, along
   with any game currently running from Steam's library (matched by
@@ -33,12 +34,14 @@ never get timed out.
   local to this repo) accumulates total playtime. See
   [Playtime tracking](#playtime-tracking) below.
 - Once **today's cumulative playtime** (across all sessions, surviving
-  kills and reopens) passes **50 minutes** (`ESCALATION_MINUTES`), the
+  kills and reopens) passes **50 minutes** (`today_escalation_minutes`), the
   warn/kill schedule above is replaced by a straight recurring cadence: an
-  alert every **5 minutes** and a forced kill every **30 minutes** of
-  cumulative play. Past **120 minutes** (`HARD_ESCALATION_MINUTES`), kills
-  come every **7 minutes** instead. This only escalates — once you've
-  played enough today, closing and reopening Steam no longer resets it.
+  alert every **5 minutes** (`today_escalation_alert_interval`) and a forced
+  kill every **30 minutes** (`today_escalation_kill_interval`) of cumulative
+  play. Past **120 minutes** (`today_hard_escalation_minutes`), kills come
+  every **7 minutes** (`today_hard_escalation_kill_interval`) instead. This
+  only escalates — once you've played enough today, closing and reopening
+  Steam no longer resets it.
 
 ## Prerequisites
 
@@ -117,21 +120,20 @@ Example output while a game is running:
 ```
 Steam/game: ACTIVE (Ticket to Ride)
 Running for: 2m (138s)
-Warnings fired: 1,2,
+Warnings fired: 5, 10
 Time to kill: 162s (~3m)
 ```
 
 `launchctl print` showing `runs = N` with `N` increasing roughly once a
 minute, and `last exit code = 0`, confirms launchd is calling the script
-on schedule and it's exiting cleanly. If `/tmp/steam_timer_start` appears
-and updates while Steam is open, the detection logic is working too.
+on schedule and it's exiting cleanly. If `/tmp/steam_timer_session.json`
+appears and updates while Steam is open, the detection logic is working too.
 
 ## Testing
 
 The default thresholds (1/2/3/5 minutes) are already fast enough to
-verify by hand. To go even faster, edit the variables at the top of
-`productivity_guard.py`, then reload the agent so launchd picks up the
-change:
+verify by hand. To go even faster, edit the values in `config.json`, then
+reload the agent so launchd picks up the change:
 
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.user.productivityguard.plist
@@ -171,10 +173,10 @@ warning timer. It's a JSON array with one entry per calendar day:
   Steam's `steamapps/common/`, e.g. "Ticket to Ride". Empty if only the
   Steam client was open with no game running.
 
-The all-time total shown in dialogs ("Xh Ym total since Oct 1, 2026") is
-`HISTORICAL_MINUTES` (a fixed constant in `productivity_guard.py`, covering
-play before this log existed) plus the sum of every entry's
-`minutes_played`.
+The all-time total shown in dialogs ("Xh Ym total since <date>") is just the
+sum of every entry's `minutes_played`, and the "since" date is the earliest
+entry's `date`. Play from before this log existed is folded into that
+earliest entry's `minutes_played` rather than tracked separately.
 
 This file lives inside the repo, under `data/`, to keep everything
 contained in one place rather than scattered across `/tmp` and dotfiles.
@@ -186,5 +188,5 @@ committed or pushed to this (public) GitHub repo.
 ```bash
 launchctl unload ~/Library/LaunchAgents/com.user.productivityguard.plist
 rm ~/Library/LaunchAgents/com.user.productivityguard.plist
-rm -f /tmp/steam_timer_start /tmp/steam_timer_fired
+rm -f /tmp/steam_timer_session.json
 ```
