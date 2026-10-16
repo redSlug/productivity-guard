@@ -32,6 +32,13 @@ never get timed out.
 - Every minute Steam is active, `data/playtime.json` (gitignored, kept
   local to this repo) accumulates total playtime. See
   [Playtime tracking](#playtime-tracking) below.
+- Once **today's cumulative playtime** (across all sessions, surviving
+  kills and reopens) passes **50 minutes** (`ESCALATION_MINUTES`), the
+  warn/kill schedule above is replaced by a straight recurring cadence: an
+  alert every **5 minutes** and a forced kill every **30 minutes** of
+  cumulative play. Past **120 minutes** (`HARD_ESCALATION_MINUTES`), kills
+  come every **7 minutes** instead. This only escalates — once you've
+  played enough today, closing and reopening Steam no longer resets it.
 
 ## Prerequisites
 

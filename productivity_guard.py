@@ -54,6 +54,19 @@ WARNING_TIERS = [(WARN_MINUTES_3, "15"), (WARN_MINUTES_2, "10"), (WARN_MINUTES_1
 # How long the final dialog is shown before the kill actually happens.
 KILL_WARNING_SECONDS = 20
 
+# Once today's cumulative playtime (survives individual kills/reopens, see
+# update_playtime) passes this many minutes, the per-session warn/kill cadence
+# above is replaced by a straight cumulative-minutes cadence below -- nagging
+# and force-killing more aggressively the more you've played today, no matter
+# how often the current session itself gets killed and reopened.
+ESCALATION_MINUTES = 50
+ESCALATION_ALERT_INTERVAL = 5
+ESCALATION_KILL_INTERVAL = 30
+
+# Past this many cumulative minutes today, kills come even more often.
+HARD_ESCALATION_MINUTES = 120
+HARD_ESCALATION_KILL_INTERVAL = 7
+
 DIALOG_TITLE = "Productivity Guard"
 
 
@@ -235,6 +248,32 @@ def print_status():
         print(f"Time to kill: {to_kill}s (~{(to_kill + 59) // 60}m)")
 
 
+def handle_escalation(minutes_played, active_label, summary):
+    """Past ESCALATION_MINUTES of cumulative play today, nags and kills on a
+    straight recurring cadence (keyed off minutes_played, which only ever
+    increases by 1 per active minute, so each multiple below is hit exactly
+    once -- no extra "did this already fire" bookkeeping needed)."""
+    kill_interval = (
+        HARD_ESCALATION_KILL_INTERVAL
+        if minutes_played >= HARD_ESCALATION_MINUTES
+        else ESCALATION_KILL_INTERVAL
+    )
+
+    if minutes_played % kill_interval == 0:
+        notify(
+            f"{active_label} has been running a lot today -- {minutes_played} "
+            f"minutes so far. Closing it in {KILL_WARNING_SECONDS} seconds. {summary}"
+        )
+        time.sleep(KILL_WARNING_SECONDS)
+        kill_steam()
+        clear_state()
+    elif minutes_played % ESCALATION_ALERT_INTERVAL == 0:
+        notify(
+            f"{active_label} has been running a lot today -- {minutes_played} "
+            f"minutes so far. {summary}"
+        )
+
+
 def run():
     if not steam_active():
         clear_state()
@@ -265,6 +304,10 @@ def run():
 
     elapsed_min = (now - start) // 60
     fired = read_fired()
+
+    if minutes_played >= ESCALATION_MINUTES:
+        handle_escalation(minutes_played, active_label, summary)
+        return
 
     if elapsed_min >= KILL_MINUTES:
         notify(
